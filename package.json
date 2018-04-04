@@ -1,0 +1,26 @@
+{
+  "name": "jquery-mentions-input",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.min.js",
+  "scripts": {
+    "distribute": "rm -rf dist && mkdir dist && browserify --standalone Parser -t babelify index.js | uglifyjs > dist/index.min.js",
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@stash.vodori.com:2121/pc/jquery-mentions-input.git"
+  },
+  "author": "pepper@vodori.com",
+  "license": "MIT",
+  "dependencies": {
+    "underscore": "^1.8.3"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babelify": "^8.0.0",
+    "browserify": "^16.1.1",
+    "minifyify": "^7.3.5"
+  }
+}
