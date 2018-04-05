@@ -176,7 +176,18 @@ const _ = require("underscore");
 
             //Returns the values that doesn't match the condition
             mentionsCollection = _.reject(mentionsCollection, function (mention, index) {
-                return !mention.value || inputText.indexOf(mention.value) == -1;
+                var mentionCantBeFound = !mention.value || inputText.indexOf(mention.value) == -1;
+                if(mentionCantBeFound) {
+                    var modifiedMentionValue = mention.value.substr(0, mention.value.length - 1);
+                    var updatedMessageText = inputText.replace(modifiedMentionValue, "");
+                    if(updatedMessageText === inputText) {
+                        modifiedMentionValue = mention.value.substr(1, mention.value.length);
+                        updatedMessageText = inputText.replace(modifiedMentionValue, "");
+                    }
+                    elmInputBox.val(updatedMessageText); //Set the value to the txt area
+                    elmInputBox.trigger('mention');
+                }
+                return mentionCantBeFound;
             });
             mentionsCollection = _.compact(mentionsCollection); //Delete all the falsy values of the array and return the new array
         }
