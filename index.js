@@ -180,16 +180,21 @@ const _ = require("underscore");
                 if(mentionCantBeFound) {
                     var modifiedMentionValue = mention.value.substr(0, mention.value.length - 1);
                     var updatedMessageText = inputText.replace(modifiedMentionValue, "");
+                    var caratPosition = inputText.indexOf(modifiedMentionValue);
                     if(updatedMessageText === inputText) {
                         modifiedMentionValue = mention.value.substr(1, mention.value.length);
                         updatedMessageText = inputText.replace(modifiedMentionValue, "");
+                        caratPosition = inputText.indexOf(modifiedMentionValue);
                     }
+
                     elmInputBox.val(updatedMessageText); //Set the value to the txt area
                     elmInputBox.trigger('mention');
+                    utils.setCaratPosition(elmInputBox[0], caratPosition);
                 }
                 return mentionCantBeFound;
             });
             mentionsCollection = _.compact(mentionsCollection); //Delete all the falsy values of the array and return the new array
+            updateValues();
         }
 
         //Adds mention to mentions collections
@@ -219,7 +224,45 @@ const _ = require("underscore");
             hideAutoComplete();
 
             // Mentions and syntax message
-            var updatedMessageText = start + mention.value + ' ' + end;
+            var updatedMessageText = start + mention.value + end;
+            elmInputBox.val(updatedMessageText); //Set the value to the txt area
+            elmInputBox.trigger('mention');
+            updateValues();
+
+            // Set correct focus and selection
+            elmInputBox.focus();
+            utils.setCaratPosition(elmInputBox[0], startEndIndex);
+        }
+
+        //Adds mention to mentions collections
+        function addInitialMention(mention) {
+            currentDataQuery = mention.id;
+
+            var currentMessage = getInputBoxValue(); //Get the actual value of the text area
+
+            // Using a regex to figure out positions
+            var regex = new RegExp("\\" + settings.triggerChar + "\\[\\~" + currentDataQuery + "\\]", "gi");
+            regex.exec(currentMessage); //Executes a search for a match in a specified string. Returns a result array, or null
+
+            var startCaretPosition = regex.lastIndex - currentDataQuery.length - 4; //Set the star caret position
+            var currentCaretPosition = regex.lastIndex; //Set the current caret position
+
+            var start = currentMessage.substr(0, startCaretPosition);
+            var end = currentMessage.substr(currentCaretPosition, currentMessage.length);
+            var startEndIndex = (start + mention.value).length + 1;
+
+            // See if there's the same mention in the list
+            if( !_.find(mentionsCollection, function (object) { return object.id == mention.id; }) ) {
+                mentionsCollection.push(mention);//Add the mention to mentionsCollections
+            }
+
+            // Cleaning before inserting the value, otherwise auto-complete would be triggered with "old" inputbuffer
+            resetBuffer();
+            currentDataQuery = '';
+            hideAutoComplete();
+
+            // Mentions and syntax message
+            var updatedMessageText = start + mention.value + end;
             elmInputBox.val(updatedMessageText); //Set the value to the txt area
             elmInputBox.trigger('mention');
             updateValues();
@@ -477,6 +520,30 @@ const _ = require("underscore");
             updateValues();
         }
 
+        function getMentionsFromContent (message) {
+            var regExp = /@\[~(.*?)\]/g;
+            var mentions = [];
+
+            var match = regExp.exec(message);
+            while (match) {
+                var userId = match[1];
+                if(userId) {
+                    // build a mention object
+                    var user = _.find(settings.data, function(user){ return user.id == userId; });
+                    if(user) {
+                        var mention = {
+                            id: utils.htmlEncode(user.id),
+                            value: utils.htmlEncode(user.name),
+                            'type':utils.htmlEncode('contact')
+                        };
+                        mentions.push(mention);
+                    }
+                }
+                match = regExp.exec(message);
+            }
+            return mentions;
+        }
+
         // Public methods
         return {
             //Initializes the mentionsInput component on a specific element.
@@ -494,6 +561,19 @@ const _ = require("underscore");
                     addMention( settings.prefillMention );
                 }
 
+                // If there is initial content to set
+                if ( settings.initialContent ) {
+                    // setInitialValue( settings.initialContent );
+
+                    // set the text
+                    elmInputBox.val(settings.initialContent);
+                    // build the mentions from the initial content
+                    var mentions = getMentionsFromContent(settings.initialContent);
+
+                    mentions.forEach(function(mention) {
+                        addInitialMention(mention);
+                    });
+                }
             },
 
             //An async method which accepts a callback function and returns a value of the input field (including markup) as a first parameter of this function. This is the value you want to send to your server.
