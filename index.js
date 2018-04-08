@@ -55,7 +55,7 @@ const _ = require("underscore");
             return value.replace(new RegExp("(?![^&;]+;)(?!<[^<>]*)(" + term + ")(?![^<>]*>)(?![^&;]+;)", "gi"), "<b>$1</b>");
         },
         //Sets the caret in a valid position
-        setCaratPosition : function (domNode, caretPos) {
+        setCaretPosition : function (domNode, caretPos) {
             if (domNode.createTextRange) {
                 var range = domNode.createTextRange();
                 range.move('character', caretPos);
@@ -170,26 +170,71 @@ const _ = require("underscore");
             inputBuffer = [];
         }
 
-        //Updates the mentions collection
         function updateMentionsCollection() {
             var inputText = getInputBoxValue(); //Get the actual value of text area
+            var caretPosition = elmInputBox[0].selectionStart;
+            var didNotFindExactMatch = true;
+            var startCaretPosition = 0;
+            var endCaretPosition = 0;
 
             //Returns the values that doesn't match the condition
             mentionsCollection = _.reject(mentionsCollection, function (mention, index) {
                 var mentionCantBeFound = !mention.value || inputText.indexOf(mention.value) == -1;
                 if(mentionCantBeFound) {
+                    // Deleting from back
                     var modifiedMentionValue = mention.value.substr(0, mention.value.length - 1);
-                    var updatedMessageText = inputText.replace(modifiedMentionValue, "");
-                    var caratPosition = inputText.indexOf(modifiedMentionValue);
-                    if(updatedMessageText === inputText) {
-                        modifiedMentionValue = mention.value.substr(1, mention.value.length);
-                        updatedMessageText = inputText.replace(modifiedMentionValue, "");
-                        caratPosition = inputText.indexOf(modifiedMentionValue);
+                    var regex = new RegExp("\\" + modifiedMentionValue, "gi");
+                    regex.exec(inputText); //Executes a search for a match in a specified string. Returns a result array, or null
+                    var regexMatchIndex = regex.lastIndex;
+
+                    if(regexMatchIndex >= 0) {
+                        while(caretPosition != regexMatchIndex && regex.exec(inputText)) {
+                            regexMatchIndex = regex.lastIndex;
+                        }
+
+                        if(caretPosition == regexMatchIndex) {
+                            didNotFindExactMatch = false;
+                        }
+
+                        startCaretPosition = regexMatchIndex - modifiedMentionValue.length;
+                        endCaretPosition = regexMatchIndex;
                     }
+
+                    if(didNotFindExactMatch) {
+                        // Maybe the user deleted from the front
+                        modifiedMentionValue = mention.value.substr(1, mention.value.length);
+                        regex = new RegExp("\\" + modifiedMentionValue, "gi");
+                        regex.exec(inputText); //Executes a search for a match in a specified string. Returns a result array, or null
+                        regexMatchIndex = regex.lastIndex - (modifiedMentionValue.length);
+
+                        if(regexMatchIndex >= 0) {
+                            while(caretPosition != regexMatchIndex && regex.exec(inputText)) {
+                                regexMatchIndex = regex.lastIndex;
+                            }
+
+                            if(caretPosition == regexMatchIndex) {
+                                didNotFindExactMatch = false;
+                            }
+
+                            startCaretPosition = regexMatchIndex;
+                            endCaretPosition = regexMatchIndex + modifiedMentionValue.length;
+                        }
+                    }
+
+                    if(didNotFindExactMatch) {
+                        console.log('Something went wrong, couldnt find an exact match to remove for ' + mention.value + '. Returning early');
+                        return;
+                    }
+
+                    var start = inputText.substr(0, startCaretPosition);
+                    var end = inputText.substr(endCaretPosition, inputText.length);
+
+                    // Mentions and syntax message
+                    var updatedMessageText = start + end;
 
                     elmInputBox.val(updatedMessageText); //Set the value to the txt area
                     elmInputBox.trigger('mention');
-                    utils.setCaratPosition(elmInputBox[0], caratPosition);
+                    utils.setCaretPosition(elmInputBox[0], start.length);
                 }
                 return mentionCantBeFound;
             });
@@ -205,6 +250,13 @@ const _ = require("underscore");
             // Using a regex to figure out positions
             var regex = new RegExp("\\" + settings.triggerChar + currentDataQuery, "gi");
             regex.exec(currentMessage); //Executes a search for a match in a specified string. Returns a result array, or null
+            var caretPosition = elmInputBox[0].selectionStart;
+            var regexMatchStart = regex.lastIndex;
+
+            while(caretPosition != regexMatchStart && regex.exec(currentMessage)) {
+                caretPosition = elmInputBox[0].selectionStart;
+                regexMatchStart = regex.lastIndex;
+            }
 
             var startCaretPosition = regex.lastIndex - currentDataQuery.length - 1; //Set the star caret position
             var currentCaretPosition = regex.lastIndex; //Set the current caret position
@@ -224,14 +276,14 @@ const _ = require("underscore");
             hideAutoComplete();
 
             // Mentions and syntax message
-            var updatedMessageText = start + mention.value + end;
+            var updatedMessageText = start + mention.value + ' ' + end;
             elmInputBox.val(updatedMessageText); //Set the value to the txt area
             elmInputBox.trigger('mention');
             updateValues();
 
             // Set correct focus and selection
             elmInputBox.focus();
-            utils.setCaratPosition(elmInputBox[0], startEndIndex);
+            utils.setCaretPosition(elmInputBox[0], startEndIndex);
         }
 
         //Adds mention to mentions collections
@@ -269,7 +321,7 @@ const _ = require("underscore");
 
             // Set correct focus and selection
             elmInputBox.focus();
-            utils.setCaratPosition(elmInputBox[0], startEndIndex);
+            utils.setCaretPosition(elmInputBox[0], startEndIndex);
         }
 
         //Gets the actual value of the text area without white spaces from the beginning and end of the value
