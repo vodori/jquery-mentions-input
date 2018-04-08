@@ -187,7 +187,7 @@ const _ = require("underscore");
                     regex.exec(inputText); //Executes a search for a match in a specified string. Returns a result array, or null
                     var regexMatchIndex = regex.lastIndex;
 
-                    if(regexMatchIndex >= 0) {
+                    if(regexMatchIndex > 0) {
                         while(caretPosition != regexMatchIndex && regex.exec(inputText)) {
                             regexMatchIndex = regex.lastIndex;
                         }
