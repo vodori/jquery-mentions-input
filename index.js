@@ -183,7 +183,7 @@ const _ = require("underscore");
                 if(mentionCantBeFound) {
                     // Deleting from back
                     var modifiedMentionValue = mention.value.substr(0, mention.value.length - 1);
-                    var regex = new RegExp("\\" + modifiedMentionValue, "gi");
+                    var regex = new RegExp("\\" + utils.regexpEncode(modifiedMentionValue), "gi");
                     regex.exec(inputText); //Executes a search for a match in a specified string. Returns a result array, or null
                     var regexMatchIndex = regex.lastIndex;
 
@@ -203,7 +203,7 @@ const _ = require("underscore");
                     if(didNotFindExactMatch) {
                         // Maybe the user deleted from the front
                         modifiedMentionValue = mention.value.substr(1, mention.value.length);
-                        regex = new RegExp("\\" + modifiedMentionValue, "gi");
+                        regex = new RegExp(utils.regexpEncode(modifiedMentionValue), "gi");
                         regex.exec(inputText); //Executes a search for a match in a specified string. Returns a result array, or null
                         regexMatchIndex = regex.lastIndex - (modifiedMentionValue.length);
 
@@ -223,7 +223,7 @@ const _ = require("underscore");
 
                     if(didNotFindExactMatch) {
                         console.log('Something went wrong, couldnt find an exact match to remove for ' + mention.value + '. Returning early');
-                        return;
+                        return true;
                     }
 
                     var start = inputText.substr(0, startCaretPosition);
@@ -324,9 +324,9 @@ const _ = require("underscore");
             utils.setCaretPosition(elmInputBox[0], startEndIndex);
         }
 
-        //Gets the actual value of the text area without white spaces from the beginning and end of the value
+        //Gets the actual value of the text area
         function getInputBoxValue() {
-            return $.trim(elmInputBox.val());
+            return elmInputBox.val();
         }
 
         // This is taken straight from live (as of Sep 2012) GitHub code. The
