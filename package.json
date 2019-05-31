@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@stash.vodori.com:2121/pc/jquery-mentions-input.git"
+    "url": "git+https://github.com/vodori/jquery-mentions-input.git"
   },
   "author": "pepper@vodori.com",
   "license": "MIT",
